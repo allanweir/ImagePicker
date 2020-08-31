@@ -430,8 +430,8 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
     ********************/
     private class SquareImageView extends ImageView {
         public SquareImageView(Context context) {
-			super(context);
-		}
+            super(context);
+        }
 
         @Override
         public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -583,9 +583,9 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                   item.put("gpsAltitude", exif.gpsAltitude);
                   item.put("gpsAltitudeRef", exif.gpsAltitudeRef);
                   item.put("gpsDateStamp", exif.gpsDateStamp);
-                  item.put("gpsLatitude", exif.gpsLatitude);
+                  item.put("gpsLatitude", Float.toString(exif.gpsLatitude));
                   item.put("gpsLatitudeRef", exif.gpsLatitudeRef);
-                  item.put("gpsLongitude", exif.gpsLongitude);
+                  item.put("gpsLongitude", Float.toString(exif.gpsLongitude));
                   item.put("gpsLongitudeRef", exif.gpsLongitudeRef);
                   item.put("gpsProcessingMethod", exif.gpsProcessingMethod);
                   item.put("gpsTimestamp", exif.gpsTimestamp);
@@ -814,9 +814,9 @@ class ExifHelper {
   public String gpsAltitude = null;
   public String gpsAltitudeRef = null;
   public String gpsDateStamp = null;
-  public String gpsLatitude = null;
+  public float gpsLatitude;
   public String gpsLatitudeRef = null;
-  public String gpsLongitude = null;
+  public float gpsLongitude;
   public String gpsLongitudeRef = null;
   public String gpsProcessingMethod = null;
   public String gpsTimestamp = null;
@@ -853,6 +853,9 @@ class ExifHelper {
    * Reads all the EXIF data from the input file.
    */
   public void readExifData() {
+    float[] latlng = new float[2];
+    inFile.getLatLong(latlng);
+    
     this.aperture = inFile.getAttribute(ExifInterface.TAG_APERTURE);
     this.datetime = inFile.getAttribute(ExifInterface.TAG_DATETIME);
     this.exposureTime = inFile.getAttribute(ExifInterface.TAG_EXPOSURE_TIME);
@@ -861,9 +864,9 @@ class ExifHelper {
     this.gpsAltitude = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE);
     this.gpsAltitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF);
     this.gpsDateStamp = inFile.getAttribute(ExifInterface.TAG_GPS_DATESTAMP);
-    this.gpsLatitude = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
+    this.gpsLatitude = latlng[0];//inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
     this.gpsLatitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
-    this.gpsLongitude = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
+    this.gpsLongitude = latlng[1];//inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
     this.gpsLongitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
     this.gpsProcessingMethod = inFile.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD);
     this.gpsTimestamp = inFile.getAttribute(ExifInterface.TAG_GPS_TIMESTAMP);
