@@ -583,9 +583,11 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                   item.put("gpsAltitude", exif.gpsAltitude);
                   item.put("gpsAltitudeRef", exif.gpsAltitudeRef);
                   item.put("gpsDateStamp", exif.gpsDateStamp);
-                  item.put("gpsLatitude", Float.toString(exif.gpsLatitude));
+                  item.put("gpsLatitude", exif.gpsLatitude==null ? null : exif.gpsLatitude.toString());
+                  item.put("gpsLatitudeDeg", exif.gpsLatitudeDeg);
                   item.put("gpsLatitudeRef", exif.gpsLatitudeRef);
-                  item.put("gpsLongitude", Float.toString(exif.gpsLongitude));
+                  item.put("gpsLongitude", exif.gpsLongitude==null ? null : exif.gpsLongitude.toString());
+                  item.put("gpsLongitudeDeg", exif.gpsLongitudeDeg);
                   item.put("gpsLongitudeRef", exif.gpsLongitudeRef);
                   item.put("gpsProcessingMethod", exif.gpsProcessingMethod);
                   item.put("gpsTimestamp", exif.gpsTimestamp);
@@ -814,9 +816,11 @@ class ExifHelper {
   public String gpsAltitude = null;
   public String gpsAltitudeRef = null;
   public String gpsDateStamp = null;
-  public float gpsLatitude;
+  public Float gpsLatitude = null;
+  public String gpsLatitudeDeg = null;
   public String gpsLatitudeRef = null;
-  public float gpsLongitude;
+  public Float gpsLongitude = null;
+  public String gpsLongitudeDeg = null;
   public String gpsLongitudeRef = null;
   public String gpsProcessingMethod = null;
   public String gpsTimestamp = null;
@@ -854,7 +858,7 @@ class ExifHelper {
    */
   public void readExifData() {
     float[] latlng = new float[2];
-    inFile.getLatLong(latlng);
+    boolean haveLatlng = inFile.getLatLong(latlng);
     
     this.aperture = inFile.getAttribute(ExifInterface.TAG_APERTURE);
     this.datetime = inFile.getAttribute(ExifInterface.TAG_DATETIME);
@@ -864,9 +868,11 @@ class ExifHelper {
     this.gpsAltitude = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE);
     this.gpsAltitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF);
     this.gpsDateStamp = inFile.getAttribute(ExifInterface.TAG_GPS_DATESTAMP);
-    this.gpsLatitude = latlng[0];//inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
+    this.gpsLatitude = haveLatlng ? latlng[0] : null;
+    this.gpsLatitudeDeg = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
     this.gpsLatitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
-    this.gpsLongitude = latlng[1];//inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
+    this.gpsLongitude = haveLatlng ? latlng[1] : null;
+    this.gpsLongitudeDeg = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
     this.gpsLongitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
     this.gpsProcessingMethod = inFile.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD);
     this.gpsTimestamp = inFile.getAttribute(ExifInterface.TAG_GPS_TIMESTAMP);
