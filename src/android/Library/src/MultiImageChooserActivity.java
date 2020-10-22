@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -102,7 +103,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
     private static final int CURSORLOADER_THUMBS = 0;
     private static final int CURSORLOADER_REAL = 1;
 
-    private Map<String, Integer> fileNames = new HashMap<String, Integer>();
+    private Map<String, Integer> fileNames = new LinkedHashMap<String, Integer>();
 
     private SparseBooleanArray checkStatus = new SparseBooleanArray();
 
@@ -517,7 +518,10 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
             try {
                 Iterator<Entry<String, Integer>> i = fileNames.iterator();
                 Bitmap bmp;
+                Integer index = 0;
+
                 while (i.hasNext()) {
+                    index++;
                     Entry<String, Integer> imageInfo = i.next();
                     File file = new File(imageInfo.getKey());
                     int rotate = imageInfo.getValue();
@@ -569,6 +573,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                     }
 
                     Map<String, String> item = new HashMap<>();
+                    item.put("order", index.toString());
 
                     ExifHelper exif = new ExifHelper();
                     exif.createInFile(file.getAbsolutePath());
@@ -859,7 +864,7 @@ class ExifHelper {
   public void readExifData() {
     float[] latlng = new float[2];
     boolean haveLatlng = inFile.getLatLong(latlng);
-    
+
     this.aperture = inFile.getAttribute(ExifInterface.TAG_APERTURE);
     this.datetime = inFile.getAttribute(ExifInterface.TAG_DATETIME);
     this.exposureTime = inFile.getAttribute(ExifInterface.TAG_EXPOSURE_TIME);
