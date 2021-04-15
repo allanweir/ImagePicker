@@ -93,6 +93,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
     public static final String HEIGHT_KEY = "HEIGHT";
     public static final String QUALITY_KEY = "QUALITY";
     public static final String OUTPUT_TYPE_KEY = "OUTPUT_TYPE";
+    public static final String ALLOW_VIDEO_KEY = "ALLOW_VIDEO";
 
     private ImageAdapter ia;
 
@@ -114,6 +115,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
     private int desiredHeight;
     private int quality;
     private OutputType outputType;
+    private boolean allowVideo;
 
     private final ImageFetcher fetcher = new ImageFetcher();
 
@@ -137,6 +139,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
         desiredWidth = getIntent().getIntExtra(WIDTH_KEY, 0);
         desiredHeight = getIntent().getIntExtra(HEIGHT_KEY, 0);
         quality = getIntent().getIntExtra(QUALITY_KEY, 0);
+        allowVideo = getIntent().getBooleanExtra(ALLOW_VIDEO_KEY, false);
         maxImageCount = maxImages;
         outputType = OutputType.fromValue(getIntent().getIntExtra(OUTPUT_TYPE_KEY, 0));
 
@@ -262,11 +265,23 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                 break;
         }
 
+        String selection = MediaStore.Images.ImageColumns.MIME_TYPE + "='image/jpeg' OR " + MediaStore.Images.ImageColumns.MIME_TYPE + "='image/png'";
+//        if (!this.allowVideo) {
+//            selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+//                    + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
+//        } else {
+//            selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+//                    + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+//                    + " OR "
+//                    + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
+//                    + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
+//        }
+
         return new CursorLoader(
                 this,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 img.toArray(new String[img.size()]),
-                null,
+                selection,
                 null,
                 "DATE_MODIFIED DESC"
         );
