@@ -265,7 +265,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                 break;
         }
 
-        String selection = MediaStore.Images.ImageColumns.MIME_TYPE + "='image/jpeg' OR " + MediaStore.Images.ImageColumns.MIME_TYPE + "='image/png'";
+        String selection = MediaStore.Images.ImageColumns.MIME_TYPE + "='image/jpeg'";// OR " + MediaStore.Images.ImageColumns.MIME_TYPE + "='image/png'";
 //        if (!this.allowVideo) {
 //            selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
 //                    + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
