@@ -30,6 +30,7 @@
 
 package com.synconset;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,9 +46,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.synconset.FakeR;
+
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.LoaderManager;
 import android.app.ProgressDialog;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.DialogInterface;
@@ -58,14 +62,23 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.ImageDecoder;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
 import android.util.Base64;
 import android.util.Log;
 import android.util.SparseBooleanArray;
@@ -188,6 +201,15 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
         progress = new ProgressDialog(this);
         progress.setTitle(getString(fakeR.getId("string", "multi_image_picker_processing_images_title")));
         progress.setMessage(getString(fakeR.getId("string", "multi_image_picker_processing_images_message")));
+
+        this.requestPermission();
+    }
+
+    public void requestPermission() {
+        ActivityCompat.requestPermissions(
+                this,
+                new String[] {Manifest.permission.ACCESS_MEDIA_LOCATION},
+                4892348);
     }
 
     @Override
@@ -225,9 +247,9 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                 ImageView imageView = (ImageView) view;
 
                 if (android.os.Build.VERSION.SDK_INT >= 16) {
-                  imageView.setImageAlpha(128);
+                    imageView.setImageAlpha(128);
                 } else {
-                  imageView.setAlpha(128);
+                    imageView.setAlpha(128);
                 }
 
                 view.setBackgroundColor(selectedColor);
@@ -265,7 +287,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                 break;
         }
 
-        String selection = MediaStore.Images.ImageColumns.MIME_TYPE + "='image/jpeg'";// OR " + MediaStore.Images.ImageColumns.MIME_TYPE + "='image/png'";
+        String selection = MediaStore.Images.ImageColumns.MIME_TYPE + "='image/jpeg' OR " + MediaStore.Images.ImageColumns.MIME_TYPE + "='image/png'";
 //        if (!this.allowVideo) {
 //            selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
 //                    + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
@@ -443,8 +465,8 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
 
 
     /*********************
-    * Nested Classes
-    ********************/
+     * Nested Classes
+     ********************/
     private class SquareImageView extends ImageView {
         public SquareImageView(Context context) {
             super(context);
@@ -500,18 +522,18 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
 
             if (isChecked(position)) {
                 if (android.os.Build.VERSION.SDK_INT >= 16) {
-                  imageView.setImageAlpha(128);
+                    imageView.setImageAlpha(128);
                 } else {
-                  imageView.setAlpha(128);
+                    imageView.setAlpha(128);
                 }
 
                 imageView.setBackgroundColor(selectedColor);
 
             } else {
                 if (android.os.Build.VERSION.SDK_INT >= 16) {
-                  imageView.setImageAlpha(255);
+                    imageView.setImageAlpha(255);
                 } else {
-                  imageView.setAlpha(255);
+                    imageView.setAlpha(255);
                 }
                 imageView.setBackgroundColor(Color.TRANSPARENT);
             }
@@ -544,7 +566,11 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                     BitmapFactory.Options options = new BitmapFactory.Options();
                     options.inSampleSize = 1;
                     options.inJustDecodeBounds = true;
-                    BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+//                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+//                        _tryToGetBitmap(file, options);
+//                    } else {
+//                        BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+//                    }
                     int width = options.outWidth;
                     int height = options.outHeight;
                     float scale = calculateScale(width, height);
@@ -592,45 +618,60 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
                     item.put("order", index.toString());
 
                     ExifHelper exif = new ExifHelper();
-                    exif.createInFile(file.getAbsolutePath());
-                    exif.readExifData();
+                    boolean hasExif = false;
+                    try {
+                        exif.createInFile(file.getAbsolutePath());
+                    } catch (Exception e) {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                InputStream stream = getFileInputStream(file);
+                                exif.createWithInputStream(stream);
+                                stream.close();
+                            }
+                        } catch (Exception e2) {
+                            Log.e("Exception", e2.toString());
+                        }
+                    }
+                    if (exif.isReady()) {
+                        exif.readExifData();
 //                    Log.i("image chooser GPS", exif.toString());
 
-                  item.put("aperture", exif.aperture);
-                  item.put("datetime", exif.datetime);
-                  item.put("exposureTime", exif.exposureTime);
-                  item.put("flash", exif.flash);
-                  item.put("focalLength", exif.focalLength);
-                  item.put("gpsAltitude", exif.gpsAltitude);
-                  item.put("gpsAltitudeRef", exif.gpsAltitudeRef);
-                  item.put("gpsDateStamp", exif.gpsDateStamp);
-                  item.put("gpsLatitude", exif.gpsLatitude==null ? null : exif.gpsLatitude.toString());
-                  item.put("gpsLatitudeDeg", exif.gpsLatitudeDeg);
-                  item.put("gpsLatitudeRef", exif.gpsLatitudeRef);
-                  item.put("gpsLongitude", exif.gpsLongitude==null ? null : exif.gpsLongitude.toString());
-                  item.put("gpsLongitudeDeg", exif.gpsLongitudeDeg);
-                  item.put("gpsLongitudeRef", exif.gpsLongitudeRef);
-                  item.put("gpsProcessingMethod", exif.gpsProcessingMethod);
-                  item.put("gpsTimestamp", exif.gpsTimestamp);
-                  item.put("iso", exif.iso);
-                  item.put("make", exif.make);
-                  item.put("model", exif.model);
-                  item.put("orientation", exif.orientation);
-                  item.put("whiteBalance", exif.whiteBalance);
+                        item.put("aperture", exif.aperture);
+                        item.put("datetime", exif.datetime);
+                        item.put("exposureTime", exif.exposureTime);
+                        item.put("flash", exif.flash);
+                        item.put("focalLength", exif.focalLength);
+                        item.put("gpsAltitude", exif.gpsAltitude);
+                        item.put("gpsAltitudeRef", exif.gpsAltitudeRef);
+                        item.put("gpsDateStamp", exif.gpsDateStamp);
+                        item.put("gpsLatitude", exif.gpsLatitude == null ? null : exif.gpsLatitude.toString());
+                        item.put("gpsLatitudeDeg", exif.gpsLatitudeDeg);
+                        item.put("gpsLatitudeRef", exif.gpsLatitudeRef);
+                        item.put("gpsLongitude", exif.gpsLongitude == null ? null : exif.gpsLongitude.toString());
+                        item.put("gpsLongitudeDeg", exif.gpsLongitudeDeg);
+                        item.put("gpsLongitudeRef", exif.gpsLongitudeRef);
+                        item.put("gpsProcessingMethod", exif.gpsProcessingMethod);
+                        item.put("gpsTimestamp", exif.gpsTimestamp);
+                        item.put("iso", exif.iso);
+                        item.put("make", exif.make);
+                        item.put("model", exif.model);
+                        item.put("orientation", exif.orientation);
+                        item.put("whiteBalance", exif.whiteBalance);
+                    }
 
-                  if (outputType == OutputType.FILE_URI) {
+                    if (outputType == OutputType.FILE_URI) {
                         file = storeImage(bmp, file.getName());
                         item.put("image_uri", Uri.fromFile(file).toString());
 //                        al.add(Uri.fromFile(file).toString());
 
                     } else if (outputType == OutputType.BASE64_STRING) {
-                    item.put("image_base64", getBase64OfImage(bmp));
+                        item.put("image_base64", getBase64OfImage(bmp));
 //                    al.add(getBase64OfImage(bmp));
                     }
-                  al.add(item);
+                    al.add(item);
                 }
-              Log.i("image chooser", al.toString());
-              return al;
+                Log.i("image chooser", al.toString());
+                return al;
             } catch (IOException e) {
                 try {
                     asyncTaskError = e;
@@ -676,15 +717,87 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
             finish();
         }
 
+        @RequiresApi(api = Build.VERSION_CODES.Q)
+        private InputStream getFileInputStream(File file) {
+            String[] projection = new String[]{MediaStore.Images.ImageColumns._ID, MediaStore.Images.ImageColumns.DISPLAY_NAME};
+            String selection = MediaStore.Images.ImageColumns.DISPLAY_NAME + " = ?";
+            String[] selectionArguments = {file.getName()};
+            Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, selection, selectionArguments, null);
+            if (cursor != null && cursor.getCount() > 0) {
+                cursor.moveToFirst();
+                Uri imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cursor.getInt(cursor.getColumnIndex(MediaStore.Images.ImageColumns._ID)));
+                cursor.close();
+
+                Uri originalImageUri = MediaStore.setRequireOriginal(imageUri);
+
+                try {
+                    InputStream stream = getContentResolver().openInputStream(originalImageUri);
+                    return stream;
+                } catch (Exception e) {
+                    Log.e("Exception", e.toString());
+                    try {
+                        InputStream stream = getContentResolver().openInputStream(imageUri);
+                        return stream;
+                    } catch (Exception e2) {
+
+                    }
+                }
+            }
+            return null;
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.P)
+        private Bitmap _tryToGetBitmap(File file, BitmapFactory.Options options) throws IOException, OutOfMemoryError {
+            Bitmap bmp = null;
+            String[] projection = new String[]{MediaStore.Images.ImageColumns._ID, MediaStore.Images.ImageColumns.DISPLAY_NAME, MediaStore.Images.ImageColumns.WIDTH, MediaStore.Images.ImageColumns.HEIGHT};
+            String selection = MediaStore.Images.ImageColumns.DISPLAY_NAME + " = ?";
+            String[] selectionArguments = {file.getName()};
+            Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, selection, selectionArguments, null);
+            if (cursor != null && cursor.getCount() > 0) {
+                cursor.moveToFirst();
+
+                if (options != null && options.inJustDecodeBounds) {
+                    options.outWidth = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.ImageColumns.WIDTH));
+                    options.outHeight = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.ImageColumns.HEIGHT));
+                    cursor.close();
+
+                    return null;
+                }
+
+                Uri imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cursor.getInt(cursor.getColumnIndex(MediaStore.Images.ImageColumns._ID)));
+                cursor.close();
+                if (options != null) {
+                    bmp = ImageDecoder.decodeBitmap(ImageDecoder.createSource(getContentResolver(), imageUri), new ImageDecoder.OnHeaderDecodedListener() {
+                        public void onHeaderDecoded(ImageDecoder decoder, ImageDecoder.ImageInfo info, ImageDecoder.Source source) {
+                            decoder.setTargetSampleSize(options.inSampleSize);
+                        }
+                    });
+                } else {
+                    bmp = ImageDecoder.decodeBitmap(ImageDecoder.createSource(getContentResolver(), imageUri));
+                }
+            }
+
+            if (bmp == null) {
+                throw new IOException("The image file could not be opened.");
+            }
+
+            return bmp;
+        }
+
         private Bitmap tryToGetBitmap(File file,
                                       BitmapFactory.Options options,
                                       int rotate,
                                       boolean shouldScale) throws IOException, OutOfMemoryError {
             Bitmap bmp;
-            if (options == null) {
-                bmp = BitmapFactory.decodeFile(file.getAbsolutePath());
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                bmp = _tryToGetBitmap(file, options);
+                rotate = 0;
             } else {
-                bmp = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+                if (options == null) {
+                    bmp = BitmapFactory.decodeFile(file.getAbsolutePath());
+                } else {
+                    bmp = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+                }
             }
 
             if (bmp == null) {
@@ -706,14 +819,14 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
         }
 
         /*
-        * The following functions are originally from
-        * https://github.com/raananw/PhoneGap-Image-Resizer
-        *
-        * They have been modified by Andrew Stephan for Sync OnSet
-        *
-        * The software is open source, MIT Licensed.
-        * Copyright (C) 2012, webXells GmbH All Rights Reserved.
-        */
+         * The following functions are originally from
+         * https://github.com/raananw/PhoneGap-Image-Resizer
+         *
+         * They have been modified by Andrew Stephan for Sync OnSet
+         *
+         * The software is open source, MIT Licensed.
+         * Copyright (C) 2012, webXells GmbH All Rights Reserved.
+         */
         private File storeImage(Bitmap bmp, String fileName) throws IOException {
             int index = fileName.lastIndexOf('.');
             String name = fileName.substring(0, index);
@@ -743,7 +856,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
             return Bitmap.createBitmap(bm, 0, 0, width, height, matrix, false);
         }
 
-       private String getBase64OfImage(Bitmap bm) {
+        private String getBase64OfImage(Bitmap bm) {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             bm.compress(Bitmap.CompressFormat.JPEG, quality, byteArrayOutputStream);
             byte[] byteArray = byteArrayOutputStream.toByteArray();
@@ -829,98 +942,114 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
 }
 
 class ExifHelper {
-  public String aperture = null;
-  public String datetime = null;
-  public String exposureTime = null;
-  public String flash = null;
-  public String focalLength = null;
-  public String gpsAltitude = null;
-  public String gpsAltitudeRef = null;
-  public String gpsDateStamp = null;
-  public Float gpsLatitude = null;
-  public String gpsLatitudeDeg = null;
-  public String gpsLatitudeRef = null;
-  public Float gpsLongitude = null;
-  public String gpsLongitudeDeg = null;
-  public String gpsLongitudeRef = null;
-  public String gpsProcessingMethod = null;
-  public String gpsTimestamp = null;
-  public String iso = null;
-  public String make = null;
-  public String model = null;
-  public String orientation = null;
-  public String whiteBalance = null;
+    public String aperture = null;
+    public String datetime = null;
+    public String exposureTime = null;
+    public String flash = null;
+    public String focalLength = null;
+    public String gpsAltitude = null;
+    public String gpsAltitudeRef = null;
+    public String gpsDateStamp = null;
+    public Float gpsLatitude = null;
+    public String gpsLatitudeDeg = null;
+    public String gpsLatitudeRef = null;
+    public Float gpsLongitude = null;
+    public String gpsLongitudeDeg = null;
+    public String gpsLongitudeRef = null;
+    public String gpsProcessingMethod = null;
+    public String gpsTimestamp = null;
+    public String iso = null;
+    public String make = null;
+    public String model = null;
+    public String orientation = null;
+    public String whiteBalance = null;
 
-  private ExifInterface inFile = null;
+    private ExifInterface inFile = null;
 //  private ExifInterface outFile = null;
 
-  /**
-   * The file before it is compressed
-   *
-   * @param filePath
-   * @throws IOException
-   */
-  public void createInFile(String filePath) throws IOException {
-    this.inFile = new ExifInterface(filePath);
-  }
+    /**
+     * The file before it is compressed
+     *
+     * @param filePath
+     * @throws IOException
+     */
+    public void createInFile(String filePath) throws IOException {
+        this.inFile = new ExifInterface(filePath);
+    }
 
-  /**
-   * The file after it has been compressed
-   *
-   * @param filePath
-   * @throws IOException
-   */
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void createWithParcelDescriptor(ParcelFileDescriptor fileDescriptor) throws IOException {
+        this.inFile = new ExifInterface(fileDescriptor.getFileDescriptor());
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void createWithInputStream(InputStream stream) throws IOException {
+        this.inFile = new ExifInterface(stream);
+    }
+
+
+
+    /**
+     * The file after it has been compressed
+     *
+     * @param filePath
+     * @throws IOException
+     */
 //  public void createOutFile(String filePath) throws IOException {
 //    this.outFile = new ExifInterface(filePath);
 //  }
 
-  /**
-   * Reads all the EXIF data from the input file.
-   */
-  public void readExifData() {
-    float[] latlng = new float[2];
-    boolean haveLatlng = inFile.getLatLong(latlng);
-
-    this.aperture = inFile.getAttribute(ExifInterface.TAG_APERTURE);
-    this.datetime = inFile.getAttribute(ExifInterface.TAG_DATETIME);
-    this.exposureTime = inFile.getAttribute(ExifInterface.TAG_EXPOSURE_TIME);
-    this.flash = inFile.getAttribute(ExifInterface.TAG_FLASH);
-    this.focalLength = inFile.getAttribute(ExifInterface.TAG_FOCAL_LENGTH);
-    this.gpsAltitude = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE);
-    this.gpsAltitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF);
-    this.gpsDateStamp = inFile.getAttribute(ExifInterface.TAG_GPS_DATESTAMP);
-    this.gpsLatitude = haveLatlng ? latlng[0] : null;
-    this.gpsLatitudeDeg = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
-    this.gpsLatitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
-    this.gpsLongitude = haveLatlng ? latlng[1] : null;
-    this.gpsLongitudeDeg = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
-    this.gpsLongitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
-    this.gpsProcessingMethod = inFile.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD);
-    this.gpsTimestamp = inFile.getAttribute(ExifInterface.TAG_GPS_TIMESTAMP);
-    this.iso = inFile.getAttribute(ExifInterface.TAG_ISO);
-    this.make = inFile.getAttribute(ExifInterface.TAG_MAKE);
-    this.model = inFile.getAttribute(ExifInterface.TAG_MODEL);
-    this.orientation = inFile.getAttribute(ExifInterface.TAG_ORIENTATION);
-    this.whiteBalance = inFile.getAttribute(ExifInterface.TAG_WHITE_BALANCE);
-  }
-
-  public int getOrientation() {
-    int o = Integer.parseInt(this.orientation);
-
-    if (o == ExifInterface.ORIENTATION_NORMAL) {
-      return 0;
-    } else if (o == ExifInterface.ORIENTATION_ROTATE_90) {
-      return 90;
-    } else if (o == ExifInterface.ORIENTATION_ROTATE_180) {
-      return 180;
-    } else if (o == ExifInterface.ORIENTATION_ROTATE_270) {
-      return 270;
-    } else {
-      return 0;
+    public boolean isReady() {
+        return this.inFile != null;
     }
-  }
 
-  public void resetOrientation() {
-    this.orientation = "" + ExifInterface.ORIENTATION_NORMAL;
-  }
+    /**
+     * Reads all the EXIF data from the input file.
+     */
+    public void readExifData() {
+        float[] latlng = new float[2];
+        boolean haveLatlng = inFile.getLatLong(latlng);
+
+        this.aperture = inFile.getAttribute(ExifInterface.TAG_APERTURE);
+        this.datetime = inFile.getAttribute(ExifInterface.TAG_DATETIME);
+        this.exposureTime = inFile.getAttribute(ExifInterface.TAG_EXPOSURE_TIME);
+        this.flash = inFile.getAttribute(ExifInterface.TAG_FLASH);
+        this.focalLength = inFile.getAttribute(ExifInterface.TAG_FOCAL_LENGTH);
+        this.gpsAltitude = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE);
+        this.gpsAltitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF);
+        this.gpsDateStamp = inFile.getAttribute(ExifInterface.TAG_GPS_DATESTAMP);
+        this.gpsLatitude = haveLatlng ? latlng[0] : null;
+        this.gpsLatitudeDeg = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE);
+        this.gpsLatitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF);
+        this.gpsLongitude = haveLatlng ? latlng[1] : null;
+        this.gpsLongitudeDeg = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE);
+        this.gpsLongitudeRef = inFile.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF);
+        this.gpsProcessingMethod = inFile.getAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD);
+        this.gpsTimestamp = inFile.getAttribute(ExifInterface.TAG_GPS_TIMESTAMP);
+        this.iso = inFile.getAttribute(ExifInterface.TAG_ISO);
+        this.make = inFile.getAttribute(ExifInterface.TAG_MAKE);
+        this.model = inFile.getAttribute(ExifInterface.TAG_MODEL);
+        this.orientation = inFile.getAttribute(ExifInterface.TAG_ORIENTATION);
+        this.whiteBalance = inFile.getAttribute(ExifInterface.TAG_WHITE_BALANCE);
+    }
+
+    public int getOrientation() {
+        int o = Integer.parseInt(this.orientation);
+
+        if (o == ExifInterface.ORIENTATION_NORMAL) {
+            return 0;
+        } else if (o == ExifInterface.ORIENTATION_ROTATE_90) {
+            return 90;
+        } else if (o == ExifInterface.ORIENTATION_ROTATE_180) {
+            return 180;
+        } else if (o == ExifInterface.ORIENTATION_ROTATE_270) {
+            return 270;
+        } else {
+            return 0;
+        }
+    }
+
+    public void resetOrientation() {
+        this.orientation = "" + ExifInterface.ORIENTATION_NORMAL;
+    }
 }
